@@ -50,6 +50,7 @@ END_MESSAGE_MAP()
 CTestServerDlg::~CTestServerDlg()
 {
 	delete m_pServerSock;	//다이얼로그 종료시 생성소켓 지움
+	delete cs;
 }
 
 
