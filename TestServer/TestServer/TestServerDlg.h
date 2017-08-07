@@ -58,4 +58,6 @@ public:
 	CListBox List_ServerLine;	//서버 상태표시줄
 
 	int line;
+	afx_msg void OnBnClickedSocketClose();
+	
 };

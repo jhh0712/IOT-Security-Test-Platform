@@ -1,6 +1,6 @@
 #include "stdafx.h"
 #include "RSA_CODE.h"
-#define MAX 10000
+#define MAX 1000
 
 RSA_CODE::RSA_CODE()
 {
@@ -11,9 +11,9 @@ RSA_CODE::~RSA_CODE()
 {
 }
 
-static int pq = 0;
-static int n = 0;
-static int e = 0;
+ int pq = 0;
+ int n = 0;
+ int e = 0;
 
 bool RSA_CODE::Is_Primes(int max)
 {
@@ -44,7 +44,7 @@ int RSA_CODE::Create_Primes()
 	{
 		while (1)
 		{
-			p = (rand() % MAX) + 10;
+			p = (rand() % MAX) + 100;
 
 			if (Is_Primes(p))
 			{
@@ -53,7 +53,7 @@ int RSA_CODE::Create_Primes()
 		}
 		while (1)
 		{
-			q = (rand() % MAX) + 10;
+			q = (rand() % MAX) + 100;
 
 			if (Is_Primes(q))
 			{
@@ -65,11 +65,14 @@ int RSA_CODE::Create_Primes()
 
 	}
 	
+	p = 659;
+	q = 919;
+
 	pq = p*q;
 	n = (p - 1) * (q - 1);
 	p = 0;
 	q = 0;
-
+	
 	return n;
 }
 
@@ -100,7 +103,7 @@ int RSA_CODE::Select_e(int n)
 		}
 	}
 
-	select = rand() % count;
+	select = (rand() % count)+1;
 
 	count = 0;
 	v = 0;
@@ -125,7 +128,7 @@ int RSA_CODE::Select_e(int n)
 			}
 		}
 	}
-	
+	//e = 120439;
 	return e;
 }
 
@@ -144,11 +147,12 @@ int RSA_CODE::Select_d(int e, int n)
 			break;
 		}
 	}
+
 	return d;
 
 }
 
-int RSA_CODE::Encrypt(int text)
+ int RSA_CODE::Encrypt(int text)
 {		
 	int temp = 1;
 	int count = 0;
@@ -180,6 +184,7 @@ int RSA_CODE::Decrypt(int text)
 
 	d = Select_d(e, n);
 	n = 0;
+
 	while (1)
 	{
 		temp *= text;

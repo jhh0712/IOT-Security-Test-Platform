@@ -1,3 +1,3 @@
 ﻿  RSA_CODE.cpp
-c:\users\issi\documents\visual studio 2015\projects\rsa_test\rsa_test\rsa_code.cpp(194): warning C4244: 'return': conversion from 'unsigned __int64' to 'int', possible loss of data
-  RSA_TEST.vcxproj -> c:\users\issi\documents\visual studio 2015\Projects\RSA_TEST\Debug\RSA_TEST.exe
+c:\users\issi\desktop\github\rsa_test\rsa_test\rsa_code.cpp(199): warning C4244: 'return': conversion from 'unsigned __int64' to 'int', possible loss of data
+  RSA_TEST.vcxproj -> C:\Users\ISSI\Desktop\github\RSA_TEST\Debug\RSA_TEST.exe

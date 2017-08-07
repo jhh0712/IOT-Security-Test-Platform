@@ -50,7 +50,11 @@ END_MESSAGE_MAP()
 CTestServerDlg::~CTestServerDlg()
 {
 	delete m_pServerSock;	//다이얼로그 종료시 생성소켓 지움
-	delete cs;
+	while (user)
+	{
+		user--;
+		delete cs[user].p;
+	}
 }
 
 
@@ -64,6 +68,7 @@ void CTestServerDlg::DoDataExchange(CDataExchange* pDX)
 {
 	CDialogEx::DoDataExchange(pDX);
 	DDX_Control(pDX, IDC_SERVER_LINE, List_ServerLine);
+
 }
 
 BEGIN_MESSAGE_MAP(CTestServerDlg, CDialogEx)
@@ -71,6 +76,7 @@ BEGIN_MESSAGE_MAP(CTestServerDlg, CDialogEx)
 	ON_WM_PAINT()
 	ON_WM_QUERYDRAGICON()
 	ON_BN_CLICKED(IDC_SOCKET_CREATE, &CTestServerDlg::OnBnClickedSocketCreate)
+	ON_BN_CLICKED(IDC_SOCKET_CLOSE, &CTestServerDlg::OnBnClickedSocketClose)
 END_MESSAGE_MAP()
 
 
@@ -109,6 +115,9 @@ BOOL CTestServerDlg::OnInitDialog()
 
 	user = 0; //접속 사용자 수 초기화
 	line = 0; //서버 상태표시줄 수 초기화
+
+	if (m_pServerSock == NULL && cs->p == NULL)
+		GetDlgItem(IDC_SOCKET_CLOSE)->EnableWindow(FALSE);	//소켓해제 버튼 비활성화
 
 	return TRUE;  // return TRUE  unless you set the focus to a control
 }
@@ -167,7 +176,12 @@ void CTestServerDlg::OnAccept()
 {
 
 	cs[user].p = new ClientSock();	//ClientSock 구조체 생성
-	m_pServerSock->Accept(*cs[user].p);	//생성된 서버소켓
+
+	CString str("클라이언트소켓 생성\r\n");
+
+	List_ServerLine.InsertString(line++, str);	//클라이언트 소켓 생성 메시지 출력
+
+	m_pServerSock->Accept(*cs[user].p);	//생성된 서버소켓으로 클라이언트 accept
 
 	CString clientName("");
 	UINT clientPort = 0;
@@ -176,19 +190,66 @@ void CTestServerDlg::OnAccept()
 
 	user++;
 	
-	CString str = clientName + "에서 접속\r\n";
+	str = clientName;
+	str += "에서 접속\r\n";
 
 	List_ServerLine.InsertString(line++, str);	//어디에서 접속했는지 메시지 출력
-	List_ServerLine.SetCurSel(line-1);
+	List_ServerLine.SetCurSel(line-1);	//리스트박스 선택값 마지막 라인으로 이동
+	
+	if (m_pServerSock != NULL && cs->p != NULL)
+		GetDlgItem(IDC_SOCKET_CLOSE)->EnableWindow(TRUE);	//소켓 해제버튼 활성화
+
 
 }
 
 //비동기 Receive 함수
 void CTestServerDlg::OnReceive(ClientSock* pSock)
 {
-	char buff[16] = { 0, };
+	int count = 1;
+	DWORD dwReadLen;
+	pSock->IOCtl(FIONREAD, &dwReadLen); 
 
-	pSock->Receive(buff, 16);
+	char *buff = new char[dwReadLen];
+	
+	pSock->Receive(buff, dwReadLen);
+
+	CString textHex("");
+	CString textAscii("");
+	CString temp("");
+
+	for (int i = 0; i < dwReadLen; i++)
+	{
+		int value = buff[i];
+		temp.Format(_T("%02X\t"), value);
+		textHex += temp;
+		
+		if (count % 8 == 0)
+			textHex += "\r\n";
+		
+		count++;
+	}
+
+	temp = "";
+	count = 1;
+
+	for (int i = 0; i < dwReadLen; i++)
+	{
+		int value = buff[i] + 48;
+		temp.Format(_T("%d\t"), value);
+		textAscii += temp;
+
+		if (count % 8 == 0)
+			textAscii += "\r\n";
+
+		count++;
+	}
+
+
+	SetDlgItemText(IDC_DATA_HEX, textHex);
+	SetDlgItemText(IDC_DATA_ASCII, textAscii);
+
+	delete buff;
+	//List_HEX.InsertString()
 
 }
 
@@ -202,7 +263,7 @@ void CTestServerDlg::OnBnClickedSocketCreate()
 	m_pServerSock->Create(7777, SOCK_STREAM);	//포트번호 설정 후 소켓생성 
 	// 포트번호는 변경가능합니다. (단, 클라이언트에서도 수정이 필요함)
 	
-	CString str("소켓생성\r\n");
+	CString str("서버 소켓생성\r\n");
 	
 	List_ServerLine.InsertString(line++, str);	//소켓생성 메시지 출력
 
@@ -211,6 +272,24 @@ void CTestServerDlg::OnBnClickedSocketCreate()
 	str = "리스닝 시작\r\n";
 
 	List_ServerLine.InsertString(line++, str);	//리스닝 시작 메시지 출력
-	List_ServerLine.SetCurSel(line-1);
+	List_ServerLine.SetCurSel(line-1);	//리스트박스 선택값 마지막 라인으로 이동
 
+	GetDlgItem(IDC_SOCKET_CREATE)->EnableWindow(FALSE);	//소켓 생성 버튼 비활성화
+
+}
+
+
+void CTestServerDlg::OnBnClickedSocketClose()
+{
+	
+	delete m_pServerSock;	//소켓 지움
+
+	while (user)
+	{
+		user--;
+		delete cs[user].p;
+	}
+	GetDlgItem(IDC_SOCKET_CLOSE)->EnableWindow(FALSE);	//소켓 해제 버튼 비활성화
+	GetDlgItem(IDC_SOCKET_CREATE)->EnableWindow(TRUE);	//소켓 생성 버튼 활성화
+	
 }
