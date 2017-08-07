@@ -205,13 +205,14 @@ void CTestServerDlg::OnAccept()
 //비동기 Receive 함수
 void CTestServerDlg::OnReceive(ClientSock* pSock)
 {
-	int count = 1;
-	DWORD dwReadLen;
-	pSock->IOCtl(FIONREAD, &dwReadLen); 
-
-	char *buff = new char[dwReadLen];
+	int count = 1;	//줄바꿈 위한 카운트
 	
-	pSock->Receive(buff, dwReadLen);
+	DWORD dwReadLen;	//수신 데이터 길이
+	pSock->IOCtl(FIONREAD, &dwReadLen); //수신 데이터 길이를 읽어옴
+
+	char *buff = new char[dwReadLen];	//수신 데이터 저장할 버퍼 동적할당
+	
+	pSock->Receive(buff, dwReadLen);	//수신 데이터만큼 리시브
 
 	CString textHex("");
 	CString textAscii("");
@@ -220,11 +221,11 @@ void CTestServerDlg::OnReceive(ClientSock* pSock)
 	for (int i = 0; i < dwReadLen; i++)
 	{
 		int value = buff[i];
-		temp.Format(_T("%02X\t"), value);
+		temp.Format(_T("%02X\t"), value);	//각 바이트를 HEX 코드로 바꿔줌
 		textHex += temp;
 		
 		if (count % 8 == 0)
-			textHex += "\r\n";
+			textHex += "\r\n";	//8바이트마다 줄바꿈
 		
 		count++;
 	}
@@ -234,22 +235,20 @@ void CTestServerDlg::OnReceive(ClientSock* pSock)
 
 	for (int i = 0; i < dwReadLen; i++)
 	{
-		int value = buff[i] + 48;
-		temp.Format(_T("%d\t"), value);
+		int value = buff[i];
+		temp.Format(_T("%d\t"), value);	//각 바이트를 ASCII 코드로 바꿔줌
 		textAscii += temp;
 
 		if (count % 8 == 0)
-			textAscii += "\r\n";
+			textAscii += "\r\n";	//8바이트마다 줄바꿈
 
 		count++;
 	}
 
-
-	SetDlgItemText(IDC_DATA_HEX, textHex);
-	SetDlgItemText(IDC_DATA_ASCII, textAscii);
+	SetDlgItemText(IDC_DATA_HEX, textHex);	//Edit Control에 출력
+	SetDlgItemText(IDC_DATA_ASCII, textAscii);	//Edit Control에 출력
 
 	delete buff;
-	//List_HEX.InsertString()
 
 }
 
@@ -289,6 +288,7 @@ void CTestServerDlg::OnBnClickedSocketClose()
 		user--;
 		delete cs[user].p;
 	}
+
 	GetDlgItem(IDC_SOCKET_CLOSE)->EnableWindow(FALSE);	//소켓 해제 버튼 비활성화
 	GetDlgItem(IDC_SOCKET_CREATE)->EnableWindow(TRUE);	//소켓 생성 버튼 활성화
 	

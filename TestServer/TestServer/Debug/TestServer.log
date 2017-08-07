@@ -1,1 +1,4 @@
-﻿  TestServer.vcxproj -> C:\Users\ISSI\Desktop\github\TestServer\Debug\TestServer.exe
+﻿  TestServerDlg.cpp
+c:\users\issi\desktop\github\testserver\testserver\testserverdlg.cpp(220): warning C4018: '<': signed/unsigned mismatch
+c:\users\issi\desktop\github\testserver\testserver\testserverdlg.cpp(235): warning C4018: '<': signed/unsigned mismatch
+  TestServer.vcxproj -> C:\Users\ISSI\Desktop\github\TestServer\Debug\TestServer.exe
