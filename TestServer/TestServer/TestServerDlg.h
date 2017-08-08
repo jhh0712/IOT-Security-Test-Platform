@@ -40,6 +40,7 @@ protected:
 public:
 	void OnReceive(ClientSock* pSock);
 	void OnAccept();
+	void OnSend(char *buff, int len);
 
 	ServerSock *m_pServerSock;
 	~CTestServerDlg();
@@ -54,10 +55,11 @@ public:
 //////////////////////////////////
 
 	afx_msg void OnBnClickedSocketCreate();	//소켓생성 버튼
+	afx_msg void OnBnClickedSocketClose();	//소켓종료 버튼
 
 	CListBox List_ServerLine;	//서버 상태표시줄
 
 	int line;
-	afx_msg void OnBnClickedSocketClose();
+	
 	
 };
