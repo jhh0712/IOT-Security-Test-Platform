@@ -16,14 +16,15 @@ public:
 	void Inv_MixColumns(unsigned char state[0x04][0x04]);
 	void Inv_AddRoundKey(unsigned char state[0x04][0x04], unsigned char RoundKey[0x04][0x04]);
 	void Inv_KeySchedule(unsigned char CipherKey[0x04][0x04], unsigned char S_BOX[0x10][0x10], int i);
-	void Inv_initCipher(unsigned char CipherKey[0x04][0x04]); // Round마다 변화된 CipherKey를 연산한 후 초기상태의 CipherKey로 되돌림
+	//void Inv_initCipher(unsigned char CipherKey[0x04][0x04]); // Round마다 변화된 CipherKey를 연산한 후 초기상태의 CipherKey로 되돌림
 
 	CString Encrypt(unsigned char state[0x04][0x04]);
-	CString Decrypt(unsigned char state[0x04][0x04]);
+	void Decrypt(char *temp, unsigned char state[0x04][0x04], unsigned char CipherKey[0x04][0x04]);
 
 	unsigned char a[0x04][0x04];
 	unsigned char b[0x04][0x04];
 
+	void FreeFunc(char *p);
 
 	/*
 	MYSQL *connection, conn;

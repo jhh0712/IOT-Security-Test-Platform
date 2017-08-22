@@ -3,15 +3,12 @@
 
 
 #define xtime(x) ((x<<1) ^ (((x>>7) & 1) * 0x1b))
-
 // Multiply is a macro used to multiply numbers in the field GF(2^8)
 #define Multiply(x,y) (((y & 1) * x) ^ ((y>>1 & 1) * xtime(x)) ^ ((y>>2 & 1) * xtime(xtime(x))) ^ ((y >> 3 & 1) * xtime(xtime(xtime(x)))) ^ ((y >> 4 & 1) * xtime(xtime(xtime(xtime(x))))))
 
 
-
 AES::AES(void)
 {
-	
 }
 
 
@@ -19,7 +16,6 @@ AES::~AES(void)
 {
 }
 
-//static unsigned char CipherKey[0x04][0x04] = {0, };
 
 static unsigned char S_BOX[0x10][0x10] = {				// S-BOX
 //		 0     1     2     3     4     5     6     7     8     9     a     b     c     d     e     f
@@ -61,27 +57,28 @@ static unsigned char Inv_S_BOX[0x10][0x10] = {				// S-BOX
 	{ 0x17, 0x2b, 0x04, 0x7e, 0xba, 0x77, 0xd6, 0x26, 0xe1, 0x69, 0x14, 0x63, 0x55, 0x21, 0x0c, 0x7d }	// f
 };
 
-CString AES::Decrypt(unsigned char state[0x04][0x04]) {
-	CString temp;
-	/*unsigned char CipherKey[0x04][0x04] = {			// Cipher Key
-	{ 0x2b, 0x28, 0xab, 0x09 },
-	{ 0x7e, 0xae, 0xf7, 0xcf },
-	{ 0x15, 0xd2, 0x15, 0x4f },
-	{ 0x16, 0xa6, 0x88, 0x3c }
-	};*/
+static unsigned char init_CipherKey[0x04][0x04] = { 0, };
 
-	unsigned char CipherKey[0x04][0x04] = { 0, };
+void AES::Decrypt(char *temp, unsigned char state[0x04][0x04], unsigned char CipherKey[0x04][0x04]) {
+	
 	int i, j = 0;
+	int x, y = 0;
 
-	Inv_initCipher(CipherKey);
-	//복조 과정
+	for (i = 0; i < 16; i++)
+		temp[i] = 0;
+
+	for (i = 0; i < 4; i++)
+		for (j = 0; j < 4; j++)
+			init_CipherKey[i][j] = CipherKey[i][j];
 
 	//역산을 위해 Round 10의 CipherKey부터 적용시키기 위함
 	for (i = 0; i < 10; i++)
 		Inv_KeySchedule(CipherKey, S_BOX, i);
 	Inv_AddRoundKey(state, CipherKey);
 	//역산 완료되면 CipherKey 초기화
-	Inv_initCipher(CipherKey);
+	for (i = 0; i < 4; i++)
+		for (j = 0; j < 4; j++)
+			CipherKey[i][j]= init_CipherKey[i][j];
 
 	Inv_ShiftRows(state);
 	Inv_SubBytes(state, Inv_S_BOX);
@@ -92,7 +89,10 @@ CString AES::Decrypt(unsigned char state[0x04][0x04]) {
 			Inv_KeySchedule(CipherKey, S_BOX, j);
 		}
 		Inv_AddRoundKey(state, CipherKey);
-		Inv_initCipher(CipherKey);
+
+		for (x = 0; x < 4; x++)
+			for (y = 0; y < 4; y++)
+				CipherKey[x][y] = init_CipherKey[x][y];
 
 		Inv_MixColumns(state);
 		Inv_ShiftRows(state);
@@ -101,82 +101,18 @@ CString AES::Decrypt(unsigned char state[0x04][0x04]) {
 
 	Inv_AddRoundKey(state, CipherKey);
 
-	//	printf("CipherText\n");
-	temp.Format(_T(""));
-	for (i = 0; i < 4; i++)
-		for (j = 0; j < 4; j++)
-			temp += state[i][j];
-
-	return temp;
-}
-
-void AES::Inv_initCipher(unsigned char CipherKey[0x04][0x04])
-{
-	//srand((unsigned int)time(NULL));
-
-	/*unsigned char temp[0x04][0x04];
-	int dec[16] = { 0, };
 
 	int k = 0;
-	char* st = LPSTR(LPCTSTR(temp));
 
-	query_state = mysql_query(connection, "SELECT * FROM testkey");
+	for (i = 0; i < 4; i++)
+		for (j = 0; j < 4; j++)
+			temp[k++] = state[i][j];
 
-	sql_result = mysql_store_result(connection);
+}
 
-	while ((sql_row = mysql_fetch_row(sql_result)) != NULL)
-	{
-	for (int i = 0; i < 4; i++)
-	for (int j = 0; j < 4; j++)
-	temp[i][j] = 0;
-
-	for (int i = 0; i < 16; i++)
-	temp_dec[i] = "";
-
-
-	CString cipherkey;
-	cipherkey = sql_row[0];
-
-
-	char* st = LPSTR(LPCTSTR(cipherkey));
-
-
-	int m = 0;
-	for (int x = 0; x < cipherkey.GetLength(); x++)
-	{
-	if (st[x] != '!')
-	{
-	temp_dec[m] += st[x];
-	}
-	else
-	{
-	if (x == 0)
-	m = 0;
-	else
-	m++;
-	}
-	}
-	for (int x = 0; x < 16; x++)
-	{
-	temp_int[x] = _ttoi(temp_dec[x]);
-	dec[x] = m_rsa->Decrypt(temp_int[x]);
-	}
-
-	}
-	*/
-	unsigned char tmp[0x04][0x04] = { // Original Cipher Key
-		{ 0x2b, 0x28, 0xab, 0x09 },
-		{ 0x7e, 0xae, 0xf7, 0xcf },
-		{ 0x15, 0xd2, 0x15, 0x4f },
-		{ 0x16, 0xa6, 0x88, 0x3c }
-	};
-
-	int i, j;
-	for (i = 0; i < 4; i++) {
-		for (j = 0; j < 4; j++) {
-			CipherKey[i][j] = tmp[i][j];
-		}
-	}
+void AES::FreeFunc(char *p)
+{
+	free(p);
 }
 
 void AES::Inv_SubBytes(unsigned char state[0x04][0x04], unsigned char S_BOX[0x10][0x10]) {
@@ -276,7 +212,7 @@ CString AES::Encrypt(unsigned char state[0x04][0x04])
 	CString temp;
 	unsigned char CipherKey[0x04][0x04] = { 0, };
 
-	Inv_initCipher(CipherKey);
+	//Inv_initCipher(CipherKey);
 	int i, j;
 
 	//변조 과정

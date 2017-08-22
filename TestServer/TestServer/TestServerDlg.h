@@ -2,11 +2,21 @@
 // TestServerDlg.h : header file
 //
 
+
+
 #pragma once
 
 #include "ServerSock.h"		//ServerSock 헤더추가
 #include "ClientSock.h"		//ClientSock 헤더추가
+#include "AES.h"	//AES 헤더추가
+#include "RSA_CODE.h"	//RSA 헤더추가
 #include "afxwin.h"
+
+
+#define DB_HOST "localhost"
+#define USER_NAME "root"
+#define USER_PASS "apmsetup"
+#define DB_NAME "issi"
 
 // CTestServerDlg dialog
 class CTestServerDlg : public CDialogEx
@@ -59,7 +69,27 @@ public:
 
 	CListBox List_ServerLine;	//서버 상태표시줄
 
+
 	int line;
 	
+	AES *m_aes;		//AES 헤더 사용하기 위해 선언
+	RSA_CODE *m_rsa;	//RSA 헤더 사용하기 위해 선언
+
+	unsigned char CipherKey[0x04][0x04];	//암호키 저장
+	unsigned char State[0x04][0x04];		//상태값 저장
+
+
+//MYSQL 사용하기 위해 선언/////
+	MYSQL *connection, conn;
+	MYSQL_RES *sql_result;
+	MYSQL_ROW sql_row;
+
+	int query_state;
+	char query[2048];
+//////////////////////////////
+
+	int dec[16];	//DB 저장된 AES키 암호문 분리용
+	CString *temp_dec[16];	//DB 저장된  AES키 암호문 분리용
+
 	
 };

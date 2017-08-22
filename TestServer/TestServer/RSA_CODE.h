@@ -10,7 +10,13 @@ public:
 	int Select_e(int n);
 	int Select_d(int e, int n);
 	int Encrypt(int text);
-	int Decrypt(int text);
+	void Decrypt(int *temp, int text[16]);
+
+	void FreeFunc(int *p);
+
+	int pq;
+	int n;
+	int e;
 
 };
 

@@ -12,9 +12,7 @@ RSA_CODE::~RSA_CODE()
 {
 }
 
-int pq = 0;
-int n = 0;
-int e = 0;
+
 
 // 소수인지 판단하는 함수
 bool RSA_CODE::Is_Primes(int max)
@@ -178,26 +176,35 @@ int RSA_CODE::Encrypt(int text)
 }
 
 //복호화 함수
-int RSA_CODE::Decrypt(int text)
+void RSA_CODE::Decrypt(int *temp, int text[16])
 {
 	int d = 0;
-
-	unsigned long long temp = 1;
 	int count = 0;
-
+	
+	for (int i = 0;i < 16; i++)
+		temp[i] = 1;
+	
 	d = Select_d(e, n);	//d를 선택
 	n = 0;
 
-	while (1)
+	for (int i = 0; i < 16; i++)
 	{
-		temp *= text;	// 암호문 제곱
-		temp %= pq;	// 모듈러 연산
+		count = 0;
+		while (1)
+		{
+			temp[i] *= text[i];	// 암호문 제곱
+			temp[i] %= pq;	// 모듈러 연산
 
-		count++;
+			count++;
 
-		if (count == d)	// d만큼 실행하면 빠져나옴
-			break;
+			if (count == d)	// d만큼 실행하면 빠져나옴
+				break;
+		}
 	}
 
-	return temp;
+}
+
+void RSA_CODE::FreeFunc(int *p)
+{
+	free(p);
 }
