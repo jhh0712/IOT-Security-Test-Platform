@@ -13,6 +13,9 @@
 
 
 #define SQL_SELECT "select * from encryptkey order by date desc limit 1"
+
+#define SQL_INSERT "insert into data values('%s', '%s')"
+
 #pragma warning(disable:4996)
 
 // CAboutDlg dialog used for App About
@@ -52,12 +55,14 @@ END_MESSAGE_MAP()
 
 CTestServerDlg::~CTestServerDlg()
 {
-	delete m_pServerSock;	//다이얼로그 종료시 생성소켓 지움
 	while (user)
 	{
 		user--;
 		delete cs[user].p;
 	}
+
+	delete m_pServerSock;	//다이얼로그 종료시 생성소켓 지움
+	
 
 	mysql_close(connection);	//Mysql 연결 끊음
 }
@@ -77,6 +82,8 @@ void CTestServerDlg::DoDataExchange(CDataExchange* pDX)
 	CDialogEx::DoDataExchange(pDX);
 	DDX_Control(pDX, IDC_SERVER_LINE, List_ServerLine);
 
+
+	
 }
 
 BEGIN_MESSAGE_MAP(CTestServerDlg, CDialogEx)
@@ -85,10 +92,15 @@ BEGIN_MESSAGE_MAP(CTestServerDlg, CDialogEx)
 	ON_WM_QUERYDRAGICON()
 	ON_BN_CLICKED(IDC_SOCKET_CREATE, &CTestServerDlg::OnBnClickedSocketCreate)
 	ON_BN_CLICKED(IDC_SOCKET_CLOSE, &CTestServerDlg::OnBnClickedSocketClose)
+	ON_BN_CLICKED(IDC_DB, &CTestServerDlg::OnBnClickedDb)
+
 END_MESSAGE_MAP()
 
 
 // CTestServerDlg message handlers
+
+
+
 
 BOOL CTestServerDlg::OnInitDialog()
 {
@@ -124,14 +136,17 @@ BOOL CTestServerDlg::OnInitDialog()
 	user = 0; //접속 사용자 수 초기화
 	line = 0; //서버 상태표시줄 수 초기화
 
+
 	for (int i = 0; i < 4; i++)
-	{
 		for (int j = 0; j < 4; j++)
-		{
-			CipherKey[i][j] = 0;
-			State[i][j] = 0;	//CipherKey, State 값 초기화
-		}
-	}
+			CipherKey[i][j] = 0;	//CipherKey값 초기화
+		
+
+	for (int m = 0; m < 1024; m++)
+		for (int i = 0; i < 4; i++)
+			for (int j = 0; j < 4; j++)
+				State[m][i][j] = 0;		//State값 초기화
+		
 
 	m_aes = (AES*)AfxGetApp();
 	//m_rsa = (RSA_CODE*)AfxGetApp();
@@ -140,7 +155,7 @@ BOOL CTestServerDlg::OnInitDialog()
 	connection = NULL;
 	mysql_init(&conn);	//Mysql 초기화
 
-	connection = mysql_real_connect(&conn, DB_HOST, USER_NAME, USER_PASS, DB_NAME, 3306, (char *)NULL, 0);	//서버에 연결시도
+	connection = mysql_real_connect(&conn, DB_HOST, USER_NAME, USER_PASS, DB_NAME, 3306, (char *)NULL, 0);	//Mysql DB서버에 연결시도
 
 	if (connection == NULL)	//연결실패 시 에러메시지 출력
 	{
@@ -207,7 +222,7 @@ HCURSOR CTestServerDlg::OnQueryDragIcon()
 void CTestServerDlg::OnAccept()
 {
 
-	cs[user].p = new ClientSock();	//ClientSock 구조체 생성
+	cs[user].p = new ClientSock();	//ClientSock 생성
 
 	CString str("클라이언트소켓 생성\r\n");
 
@@ -233,10 +248,11 @@ void CTestServerDlg::OnAccept()
 
 }
 
+
 //비동기 Receive 함수
 void CTestServerDlg::OnReceive(ClientSock* pSock)
 {
-	int count = 1;	//줄바꿈 위한 카운트
+	int count = 1;	//Edit Control 데이터 줄바꿈 위한 카운트
 	int k = 0;
 
 	CString textHex = "";	//Hex 데이터 출력용
@@ -245,46 +261,93 @@ void CTestServerDlg::OnReceive(ClientSock* pSock)
 	CString temp1 = "";	//Code 변환을 위한 임시 저장용1
 	CString temp2 = ""; //Code 변환을 위한 임시 저장용2
 	
-	//쿼리를 이용해 데이터베이스값 저장할 변수 선언
-	CString temp_aes = "";	
-	CString temp_pq = "";
-	CString temp_n = "";
-	CString temp_e = "";
+	//쿼리를 이용해 데이터베이스값 저장할 변수 CString 초기화
+	temp_aes = "";	
+	temp_pq = "";
+	temp_n = "";
+	temp_e = "";
 	////////////////////////////////////////////
 
-	dec[16] = { 0, };
+	
+	int Decrypt_RSA[16] = { 0, };	//RSA 복호화값 받을 배열
+	char Decrypt_AES[1024][16] = { 0, };	//AES 복호화값 받을 2차원 배열
 
-	int Decrypt_RSA[16];	//RSA 복호화값 받을 포인터
-	char Decrypt_AES[16];	//AES 복호화값 받을 포인터
+	dec[16] = { 0, };	//AES 키 복호화용 변수 int 초기화
 
 	for (int i = 0; i < 16; i++)
 	{
 		temp_dec[i] = new CString();
-		*temp_dec[i] = "";
+		*temp_dec[i] = "";	//CString 배열 초기화
 	}
 	
+
 	DWORD dwReadLen;	//수신 데이터 길이
 	pSock->IOCtl(FIONREAD, &dwReadLen); //수신 데이터 길이를 읽어옴
 	
-	//dwReadLen = 16;
-	
 	char *buff = new char[dwReadLen];	//수신 데이터 저장할 버퍼 동적할당
-	
 	pSock->Receive(buff, dwReadLen);	//수신 데이터만큼 리시브
 
-	for (int i = 0; i < 4; i++)
-		for (int j = 0; j < 4; j++)
-			State[i][j] = buff[k++];	//수신 데이터를 상태 2차원 배열에 대입
+
+	CString enc_query = "";	//암호화된 쿼리를 저장할 변수
+	
+	
+	int *db_enc = (int *)malloc(sizeof(int)*dwReadLen);	//수신데이터 DB에 ASCII코드 형태로 저장하기 위해 int형 배열 동적할당
+
+	for (int i = 0; i < dwReadLen; i++)
+	{
+		db_enc[i] = buff[i];	//char형 int형에 대입
+
+		CString temp_query;
+
+		temp_query.Format("%d", db_enc[i]);	//int -> CString 변환
+
+		if (i % 15 == 0 && i != 0)	//0번째를 제외하고 15번째에는 @를 추가
+			temp_query += "@";
+		else	//그 외에는 !를 추가
+			temp_query += "!";
+
+		enc_query += temp_query;	//해당 데이터를 암호화 쿼리 저장변수에 계속 추가해줌
+	}
+
+	free(db_enc);	//동적메모리 해제
+	
+	int count2 = 0;
+
+	count2 = dwReadLen / 16;	//3차원 배열 개수
+
+	k = 0;
+
+	int flag = 0;
+
+	for (int m = 0; m < count2; m++)
+	{
+		for (int i = 0; i < 4; i++)
+		{
+			for (int j = 0; j < 4; j++)
+			{
+				State[m][i][j] = buff[k++];	//수신 데이터를 상태 3차원 배열에 대입
+
+				if (k == dwReadLen)
+				{
+					flag = 1;
+					break;
+				}
+			}
+			if (flag == 1)
+				break;
+		}
+		if (flag == 1)
+			break;
+	}
 
 	query_state = mysql_query(connection, SQL_SELECT);	//쿼리문 실행
 
 	if(query_state != 0)	//쿼리문 실행 에러메시지 출력
-		AfxMessageBox("Query Error");	
+		AfxMessageBox("Query Select Error!");	
 
 	sql_result = mysql_store_result(connection);	//쿼리 실행결과 저장
 
-	k = 0;
-
+	
 	while ((sql_row = mysql_fetch_row(sql_result)) != NULL)	//쿼리 실행결과를 한줄씩 읽어옴
 	{
 		temp_aes = sql_row[0];	//!포함 암호화된 AES키
@@ -292,6 +355,8 @@ void CTestServerDlg::OnReceive(ClientSock* pSock)
 		temp_pq = sql_row[1];	//RSA pq값
 		temp_n = sql_row[2];	//RSA n값
 		temp_e = sql_row[3];	//RSA e값
+
+		temp_date = sql_row[4]; //date 값
 	}
 
 	//int형으로 형변환//////////
@@ -300,8 +365,15 @@ void CTestServerDlg::OnReceive(ClientSock* pSock)
 	m_rsa->e = _ttoi(temp_e);
 	//////////////////////////
 
+	sprintf(query, SQL_INSERT, enc_query, temp_date);	//쿼리에 암호화 데이터 추가
+	query_state = mysql_query(connection, query);	//쿼리 실행
+
+	if (query_state != 0)	//쿼리문 실행 에러메시지 출력
+		AfxMessageBox("Query Insert Error!");
+
 	char* st = LPSTR(LPCTSTR(temp_aes));	//!분리하기 위해 char형 배열로 형변환
-	
+	k = 0;
+
 	for (int i = 0; i < temp_aes.GetLength(); i++)
 	{
 		if (st[i] != '!')	//배열값중 !가 없으면
@@ -319,6 +391,7 @@ void CTestServerDlg::OnReceive(ClientSock* pSock)
 
 	for (int i = 0; i < 16; i++)
 		dec[i] = _ttoi(*temp_dec[i]);	//int형 배열에 CString으로 분리한 데이터값 형변환 후 대입
+		
 
 	m_rsa->Decrypt(Decrypt_RSA, dec);	//RSA 복호화
 
@@ -328,38 +401,50 @@ void CTestServerDlg::OnReceive(ClientSock* pSock)
 		for (int j = 0; j < 4; j++)
 			CipherKey[i][j] = Decrypt_RSA[k++];	//복호화된 키값을 CipherKey에 대입
 
-	m_aes->Decrypt(Decrypt_AES, State, CipherKey);	//State 값을 CipherKey를 이용해 AES 복호화시킴
+	
+	for (int i = 0; i < count2; i++)
+		m_aes->Decrypt(Decrypt_AES[i], State[i], CipherKey);	//State 값을 CipherKey를 이용해 AES 복호화시킴
 
-	for (int i = 0; i < 16; i++)
+
+	for (int m = 0; m < count2; m++)
 	{
-		int value = Decrypt_AES[i];
-		temp1.Format("%02X\t", value);	//각 바이트를 HEX 코드로 바꿔줌
-		textHex += temp1;
-		
-		if (count % 8 == 0)
-			textHex += "\r\n";	//8바이트마다 줄바꿈
-		
-		count++;
+		for (int i = 0; i < 16; i++)
+		{
+			int value = Decrypt_AES[m][i];
+			temp1.Format("%02X\t", value);	//각 바이트를 HEX 코드로 바꿔줌
+			textHex += temp1;
+
+			if (count % 8 == 0)
+				textHex += "\r\n";	//8바이트마다 줄바꿈
+
+			count++;
+		}
 	}
 
 	count = 1;
 
-	for (int i = 0; i < 16; i++)
+	for (int m = 0; m < count2; m++)
 	{
-		int value = Decrypt_AES[i];
-		temp2.Format("%d\t", value);	//각 바이트를 ASCII 코드로 바꿔줌
-		textAscii += temp2;
+		for (int i = 0; i < 16; i++)
+		{
+			int value = Decrypt_AES[m][i];
+			temp2.Format("%d\t", value);	//각 바이트를 ASCII 코드로 바꿔줌
+			textAscii += temp2;
 
-		if (count % 8 == 0)
-			textAscii += "\r\n";	//8바이트마다 줄바꿈
+			if (count % 8 == 0)
+				textAscii += "\r\n";	//8바이트마다 줄바꿈
 
-		count++;
+			count++;
+		}
 	}
 
 	SetDlgItemText(IDC_DATA_HEX, textHex);	//Edit Control에 출력
 	SetDlgItemText(IDC_DATA_ASCII, textAscii);	//Edit Control에 출력
 
 	OnSend(buff, dwReadLen);
+
+	for (int i = 0; i < 16; i++)
+		delete temp_dec[i];
 
 	//CString 값 비우기(혹시 모를 남아있는 메모리 제거)
 	textHex.Empty();
@@ -368,17 +453,16 @@ void CTestServerDlg::OnReceive(ClientSock* pSock)
 	temp2.Empty();
 	temp_aes.Empty();
 	temp_pq.Empty();
-	temp_n.Empty();
+	temp_n.Empty();	
 	temp_e.Empty();
 	////////////////////////////////////////////////
 
 	mysql_free_result(sql_result);
 	
 	delete buff;
-	
-	//m_aes->FreeFunc(buff2);
-	//m_rsa->FreeFunc(temp_key);
 
+	memset(st, 0, sizeof(st));
+	
 }
 
 //소켓생성 및 리스닝 시작버튼
@@ -409,20 +493,26 @@ void CTestServerDlg::OnBnClickedSocketCreate()
 //소켓 해제 버튼
 void CTestServerDlg::OnBnClickedSocketClose()
 {
-	
-	delete m_pServerSock;	//소켓 지움
-
 	while (user)
 	{
 		user--;
 		delete cs[user].p;
 	}
 
+	
+	delete m_pServerSock;	//소켓 지움
+
+	CString str("소켓 해제\r\n");
+
+	List_ServerLine.InsertString(line++, str);	//소켓해제 메시지 출력
+	List_ServerLine.SetCurSel(line - 1);	//리스트박스 선택값 마지막 라인으로 이동
+	
 	GetDlgItem(IDC_SOCKET_CLOSE)->EnableWindow(FALSE);	//소켓 해제 버튼 비활성화
 	GetDlgItem(IDC_SOCKET_CREATE)->EnableWindow(TRUE);	//소켓 생성 버튼 활성화
 	
 }
 
+//소켓통신 Send 함수
 void CTestServerDlg::OnSend(char *buff, int len)
 {
 	
@@ -430,3 +520,14 @@ void CTestServerDlg::OnSend(char *buff, int len)
 		cs[i].p->Send(buff, len);
 
 }
+
+
+//DB 확인버튼 클릭시 
+void CTestServerDlg::OnBnClickedDb()
+{
+	m_dbcheck = new CDB_Check();
+	m_dbcheck->Create(IDD_DBCHECK, this);
+	m_dbcheck->ShowWindow(SW_SHOW);
+	
+}
+

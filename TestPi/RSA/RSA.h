@@ -95,7 +95,7 @@ int Select_e(int n)
 		}
 	}
 
-	select = rand() % count;	//서로소중 하나를 랜덤으로 선택하기 위해 카운트를 임의로 선택
+	select = (rand() % count)+1;	//서로소중 하나를 랜덤으로 선택하기 위해 카운트를 임의로 선택
 
 	count = 0;
 	v = 0;

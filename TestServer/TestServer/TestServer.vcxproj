@@ -208,6 +208,7 @@
   <ItemGroup>
     <ClInclude Include="AES.h" />
     <ClInclude Include="ClientSock.h" />
+    <ClInclude Include="DB_Check.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="RSA_CODE.h" />
     <ClInclude Include="ServerSock.h" />
@@ -219,6 +220,7 @@
   <ItemGroup>
     <ClCompile Include="AES.cpp" />
     <ClCompile Include="ClientSock.cpp" />
+    <ClCompile Include="DB_Check.cpp" />
     <ClCompile Include="RSA_CODE.cpp" />
     <ClCompile Include="ServerSock.cpp" />
     <ClCompile Include="stdafx.cpp">

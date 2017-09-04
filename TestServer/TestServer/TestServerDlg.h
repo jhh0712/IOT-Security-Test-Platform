@@ -10,7 +10,9 @@
 #include "ClientSock.h"		//ClientSock 헤더추가
 #include "AES.h"	//AES 헤더추가
 #include "RSA_CODE.h"	//RSA 헤더추가
+#include "DB_Check.h"	//DB 다이얼로그 헤더추가
 #include "afxwin.h"
+#include "afxcmn.h"
 
 
 #define DB_HOST "localhost"
@@ -69,27 +71,45 @@ public:
 
 	CListBox List_ServerLine;	//서버 상태표시줄
 
-
 	int line;
 	
 	AES *m_aes;		//AES 헤더 사용하기 위해 선언
 	RSA_CODE *m_rsa;	//RSA 헤더 사용하기 위해 선언
 
-	unsigned char CipherKey[0x04][0x04];	//암호키 저장
-	unsigned char State[0x04][0x04];		//상태값 저장
+	CDB_Check *m_dbcheck;	//DB 다이얼로그 사용하기 위해 선언
 
+	unsigned char CipherKey[0x04][0x04];	//암호키 저장
+	unsigned char State[1024][0x04][0x04];		//상태값 저장
+
+	
+
+	//소켓통신시 사용 (DB 임시 저장용)
+	CString temp_aes;
+	CString temp_pq;
+	CString temp_n;
+	CString temp_e;
+	CString temp_date;
+	///////////////
+
+	
 
 //MYSQL 사용하기 위해 선언/////
 	MYSQL *connection, conn;
 	MYSQL_RES *sql_result;
+	
 	MYSQL_ROW sql_row;
-
+	
 	int query_state;
+	
 	char query[2048];
 //////////////////////////////
 
-	int dec[16];	//DB 저장된 AES키 암호문 분리용
-	CString *temp_dec[16];	//DB 저장된  AES키 암호문 분리용
+	int dec[16];	//DB 저장된 AES키 암호문 분리용 소켓
+	CString *temp_dec[16];	//DB 저장된  AES키 암호문 분리용 소켓
+
+
+	afx_msg void OnBnClickedDb();	//DB 확인버튼
 
 	
+
 };

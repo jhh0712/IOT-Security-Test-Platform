@@ -67,14 +67,34 @@ TCP/IP 소켓통신은 무선인터넷환경에서 진행되었습니다.
       create database issi;
       use issi;  
       create table data(  
-      data1 varchar(100) not null,   
-      ....
-      data5 varchar(100) not null,
+      data1 varchar(8192) not null,
       date varchar(20) not null);
       ```
     * 사용자환경에 따라 데이터베이스 구성을 바꿔서 사용하시면 됩니다. 
 * Apache
-  * 준비중 입니다.
+  * Apache는 php를 사용하기 위해 설치하므로 apmsetup을 이용해 Apache, php, Mysql을 한번에 설치하셔도 됩니다.
+  * 단, 본 프로젝트는 Apache2.4 버전과 php7.1 버전을 따로 설치하였습니다.
+  * [Apache 설치](https://www.apachelounge.com/download/)
+	* Apache는 [C++ Redistributable Visual Studio 2015](https://www.microsoft.com/ko-kr/download/details.aspx?id=53840) 설치를 선행요구합니다.
+	* Apache를 다운받은 후 Apache24 폴더만 C드라이브에 압축을 풀어줍니다.
+	* Apache24\conf 폴더에 httpd.conf 파일을 수정해야 합니다.
+	* ServerName www.example.com:80 을 찾아 #을 제거후 localhost:80으로 변경 후 저장합니다.
+	* 명령프롬프트를 관리자 권한으로 실행합니다.
+	* httpd -k install 입력후 아파치 서비스를 설치합니다.
+	* httpd -k start 입력후 아파치 서비스를 시작해 줍니다.
+	* 인터넷 창을 통해 localhost에 접속하면 Apache24\htdocs의 index.html 파일이 실행됩니다.(아파치 구동 성공)
+	* 윈도우나 사용자 환경이 다를 시 사용자 환경에 맞는 설정이 필요합니다.
+  * [php7.1 설치](http://windows.php.net/download/)
+	* 해당 링크에 접속하여 php 버전 선택 후 Thread Safe를 다운로드합니다.
+	* Apache를 설치 했던 C드라이브에 압축을 풀어줍니다.
+	* 폴더명은 php71로 변경하였습니다.
+	* php 폴더에 php.ini이 없습니다. php.ini-development.ini 를 php.ini로 파일명을 변경해줍니다.
+	* 파일명 변경 후 php.ini를 열어 extension_dir 경로를 C:\php71\ext로 변경 후 저장합니다.
+	* 명령프롬프트를 관리자 권한으로 실행합니다.
+	* httpd -k restart 로 Apache를 재실행합니다.
+	* Apache24\htdocs에 phpinfo.php 를 만든 후 <?php phpinfo(); ?>와 같이 작성 후 저장합니다.
+	* 인터넷 창을 통해 localhost/phpinfo.php 에 접속하여 php 정보가 나온다면 설치가 완료된것 입니다.
+
 
 ### 안드로이드 
 * 안드로이드는 Android Studio에서 작성되었습니다.

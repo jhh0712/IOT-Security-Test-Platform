@@ -66,7 +66,7 @@ void AES::Decrypt(char *temp, unsigned char state[0x04][0x04], unsigned char Cip
 
 	for (i = 0; i < 16; i++)
 		temp[i] = 0;
-
+	
 	for (i = 0; i < 4; i++)
 		for (j = 0; j < 4; j++)
 			init_CipherKey[i][j] = CipherKey[i][j];

@@ -120,7 +120,6 @@ void KeySchedule(unsigned char CipherKey[0x04][0x04], unsigned char S_BOX[0x10][
 	}
 }
 
-
 void Encrypt(char *temp, unsigned char state[0x04][0x04], unsigned char CipherKey[0x04][0x04])
 {
 
@@ -129,6 +128,7 @@ void Encrypt(char *temp, unsigned char state[0x04][0x04], unsigned char CipherKe
 
 	for(i = 0; i < 16; i++)
 		temp[i] = 0;
+	
 
 	AddRoundKey(state, CipherKey);
 

@@ -40,8 +40,8 @@ public class MainActivity extends AppCompatActivity {
 
     public int[] rsa_dec = new int[16];             //RSA 복호화 데이터 저장
     public byte[][] CipherKey = new byte[4][4];    //CipherKey 저장
-    public byte[][] State = new byte[4][4];         //AES 암호화 상태값 저장
-    public byte[][] aes_enc = new byte[4][4];       //AES 복호화 데이터 저장
+    public byte[][][] State = new byte[1024][4][4];         //AES 암호화 상태값 저장
+    public byte[][][] aes_enc = new byte[1024][4][4];       //AES 복호화 데이터 저장
 
 
     @Override
@@ -165,6 +165,8 @@ public class MainActivity extends AppCompatActivity {
         private static final int serverPort = 7777;    //포트번호
         private Socket inetSocket = null;   //소켓 초기화
         int k =0;
+        int len = 0;
+        int count2 = 0;
 
 
         public void run() {
@@ -181,23 +183,36 @@ public class MainActivity extends AppCompatActivity {
 
                         in.read(data);  //바이트 배열만큼 데이터를 읽음
 
+                        for (int i = 0; i < data.length; i++) {
+                            if (data[i] == '\0') //바이트 배열의 데이터 끝에서 빠져나옴
+                            {
+                                len = i;
+                                break;
+                            }
+                        }
+
+                        count2 = len / 16;
+
                         getData("http://192.168.0.57/TestPlatform.php");    //getData 함수 실행
 
                         AES m_aes = new AES();  //AES 클래스 사용하기 위해 생성
 
                         k = 0;
 
-                        for (int i = 0; i < 4; i++)
-                            for (int j = 0; j < 4; j++)
-                                State[i][j] = data[k++];    //상태값에 수신 데이터값 대입
+                        for(int m = 0; m < count2; m++)
+                            for (int i = 0; i < 4; i++)
+                                for (int j = 0; j < 4; j++)
+                                    State[m][i][j] = data[k++];    //상태값에 수신 데이터값 대입
 
-                        aes_enc = m_aes.Decrypt(CipherKey, State);  //AES 복호화
+                        for(int i = 0; i < count2; i++)
+                            aes_enc[i] = m_aes.Decrypt(CipherKey, State[i]);  //AES 복호화
 
                         k = 0;
 
-                        for (int i = 0; i < 4; i++)
-                            for (int j = 0; j < 4; j++)
-                                data[k++] = aes_enc[i][j];  //복호화값 대입
+                        for(int m = 0; m < count2; m++)
+                            for (int i = 0; i < 4; i++)
+                                for (int j = 0; j < 4; j++)
+                                    data[k++] = aes_enc[m][i][j];  //복호화값 대입
 
                         count = 1;    //카운트 초기화
 
