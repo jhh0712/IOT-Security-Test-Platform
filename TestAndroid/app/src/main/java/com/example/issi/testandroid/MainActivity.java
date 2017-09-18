@@ -161,7 +161,7 @@ public class MainActivity extends AppCompatActivity {
 
     private class TCPclient implements Runnable {
 
-        private static final String serverIP = "192.168.0.57";  //ip 주소
+        private static final String serverIP = "192.168.0.73";  //ip 주소
         private static final int serverPort = 7777;    //포트번호
         private Socket inetSocket = null;   //소켓 초기화
         int k =0;
@@ -193,7 +193,7 @@ public class MainActivity extends AppCompatActivity {
 
                         count2 = len / 16;
 
-                        getData("http://192.168.0.57/TestPlatform.php");    //getData 함수 실행
+                        getData("http://192.168.0.73/TestPlatform.php");    //getData 함수 실행
 
                         AES m_aes = new AES();  //AES 클래스 사용하기 위해 생성
 
