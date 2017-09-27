@@ -86,7 +86,9 @@ public:
 	void print_ether_header(const unsigned char *data);	//이더넷 헤더 출력함수
 	int print_ip_header(const unsigned char *data);	//IP 헤더 출력함수
 	int print_tcp_header(const unsigned char *data);	//TCP 헤더 출력함수
-	void print_data(const unsigned char *data);	//DATA 출력함수
+	//void print_data(const unsigned char *data);	//DATA 출력함수
+
+	void Check_Normal(const unsigned char *data, const unsigned char *data2);
 
 	pcap_if_t *alldevs = NULL;
 	char errbuf[PCAP_ERRBUF_SIZE];
@@ -123,4 +125,13 @@ public:
 	
 
 	struct bpf_program fcode;
+	CEdit m_editnormal;
+	CEdit m_editabnormal;
+
+	CString time;
+
+	int h, m, s;
+
+	int d_m;
+	int count;
 };

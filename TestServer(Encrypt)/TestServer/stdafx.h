@@ -37,7 +37,7 @@
 
 #include <mysql.h>
 #pragma comment(lib, "libmySQL.lib")
-
+//#pragma comment(lib, "libmySQL.dll")
 
 
 #ifdef _UNICODE

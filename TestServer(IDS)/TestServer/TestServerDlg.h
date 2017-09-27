@@ -132,7 +132,7 @@ public:
 
 	afx_msg void OnBnClickedIds();
 	
-	CListCtrl CLIENT_LIST;
+	//CListCtrl CLIENT_LIST;
 	/*int list_count;
 	
 	static UINT ThreadFirst(LPVOID _mothod);

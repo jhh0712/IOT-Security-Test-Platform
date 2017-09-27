@@ -303,6 +303,7 @@ void CTestServerDlg::OnReceive(ClientSock* pSock)
 	
 	
 	int *db_enc = (int *)malloc(sizeof(int)*dwReadLen);	//수신데이터 DB에 ASCII코드 형태로 저장하기 위해 int형 배열 동적할당
+	
 
 	for (int i = 0; i < dwReadLen; i++)
 	{
@@ -312,12 +313,14 @@ void CTestServerDlg::OnReceive(ClientSock* pSock)
 
 		temp_query.Format("%d", db_enc[i]);	//int -> CString 변환
 
-		if (i % 15 == 0 && i != 0)	//0번째를 제외하고 15번째에는 @를 추가
+		if (count % 16 == 0)	//0번째를 제외하고 15번째에는 @를 추가
 			temp_query += "@";
 		else	//그 외에는 !를 추가
 			temp_query += "!";
 
 		enc_query += temp_query;	//해당 데이터를 암호화 쿼리 저장변수에 계속 추가해줌
+
+		count++;
 	}
 
 	free(db_enc);	//동적메모리 해제

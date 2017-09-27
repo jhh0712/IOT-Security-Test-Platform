@@ -34,7 +34,7 @@ int main(void)
 	memset(&server_addr, 0, sizeof(server_addr));	//소켓 주소 초기화
 	server_addr.sin_family = AF_INET;	//IPv4 주소체계
 	server_addr.sin_port = htons(7777);	//서버 포트번호	     	
-	server_addr.sin_addr.s_addr = inet_addr("192.168.0.73");	//윈도우 서버 IP주소 
+	server_addr.sin_addr.s_addr = inet_addr("192.168.0.57");	//윈도우 서버 IP주소 
 
 
 	if(connect(client_socket, (struct sockaddr*)&server_addr, sizeof(server_addr))==-1)	//연결요청 및 실패시
@@ -49,7 +49,7 @@ int main(void)
 	while(1)
 	{
 
-		rand_len = (rand() % 255)+1;	//send 데이터 길이설정 (원하는 길이 설정)
+		rand_len = 50;	//send 데이터 길이설정 (원하는 길이 설정)
 
 		buff = (char *)malloc(sizeof(char)*rand_len);	//동적 메모리할당
 	
@@ -79,7 +79,7 @@ int main(void)
 				printf("\n");
 		}
 		printf("\n");
-		socket_state = send(client_socket, buff, rand_len, 0); //데이터 전송
+		socket_state = send(client_socket, buff, rand_len, 0); //AES 암호화 시킨 데이터 전송
 		
 		if(socket_state == -1)
 			break;
@@ -87,7 +87,7 @@ int main(void)
 		
 		free(buff);	//메모리해제
 
-		sleep(2);	//2초 딜레이
+		sleep(3);	//3초 딜레이
 
 		
 	}

@@ -1,8 +1,8 @@
 <?php
 
-$mysql_host = 'localhost';
+$mysql_host = '192.168.0.76';
 $mysql_user = 'root';
-$mysql_password = 'apmsetup';
+$mysql_password = 'issi';
 $mysql_db = 'issi';
 
 // Á¢¼Ó

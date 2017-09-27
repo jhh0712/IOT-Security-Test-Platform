@@ -271,23 +271,53 @@ void CDB_Check::ThreadFunc()
 			temp_int[i] = _ttoi(*temp_dec2[i]);	//CString -> int 변환
 
 		k = 0;
+
+		int flag = 0;
 		for (int m = 0; m < count2; m++)
+		{
 			for (int i = 0; i < 4; i++)
+			{
 				for (int j = 0; j < 4; j++)
+				{
 					State[m][i][j] = temp_int[k++];	//상태값에 대입
+
+					if (k == count3)
+					{
+						flag = 1;
+						break;
+					}
+
+				}
+				if (flag == 1)
+					break;
+			}
+			if (flag == 1)
+				break;
+		}
 
 		for (int i = 0; i < count2; i++)
 			m_aes->Decrypt(Decrypt_AES[i], State[i], CipherKey);	//State 값을 CipherKey를 이용해 AES 복호화시킴
 
 		CString dec_data = "";
 
+		flag = 0;
+		k = 0;
 		for (int i = 0; i < count2; i++)
 		{
 			for (int j = 0; j < 16; j++)
 			{
 				//Decrypt_AES[i][j] = Decrypt_AES[i][j] + 48;
 				dec_data += Decrypt_AES[i][j];	//복호화된 데이터 추가
+				k++;
+
+				if (k == count3)
+				{
+					flag = 1;
+					break;
+				}
 			}
+			if (flag == 1)
+				break;
 		}
 
 		DB_LIST.InsertItem(list_count, dec_data);	//복호화 데이터 List Control에 추가
@@ -315,6 +345,8 @@ void CDB_Check::ThreadFunc()
 	temp_pq.Empty();
 	temp_n.Empty();
 	temp_e.Empty();
+
+	
 
 }
 
@@ -453,11 +485,29 @@ void CDB_Check::ThreadFunc2()
 		for (int i = 0; i < count3; i++)
 			temp_int[i] = _ttoi(*temp_dec2[i]);	//CString -> int 변환
 
+		int flag = 0;
 		k = 0;
 		for (int m = 0; m < count2; m++)
+		{
 			for (int i = 0; i < 4; i++)
+			{
 				for (int j = 0; j < 4; j++)
+				{
 					State[m][i][j] = temp_int[k++];	//상태값에 대입
+
+					if (k == count3)
+					{
+						flag = 1;
+						break;
+					}
+
+				}
+				if (flag == 1)
+					break;
+			}
+			if (flag == 1)
+				break;
+		}
 
 		for (int i = 0; i < count2; i++)
 			m_aes->Decrypt(Decrypt_AES[i], State[i], CipherKey);	//State 값을 CipherKey를 이용해 AES 복호화시킴

@@ -6,7 +6,8 @@
 #include "IDS.h"
 #include "afxdialogex.h"
 
-#define FILTER_RULE "host 192.168.0.73 and port 7777"	//서버주소와 포트번호
+//#define FILTER_RULE "host 192.168.0.57 and port 7777"	//서버주소와 포트번호 입력가능
+#define FILTER_RULE "port 7777"
 #pragma warning(disable:4996)
 
 // CIDS dialog
@@ -32,6 +33,8 @@ void CIDS::DoDataExchange(CDataExchange* pDX)
 	DDX_Control(pDX, IDC_TCP, m_editTcp);
 	DDX_Control(pDX, IDC_IP, m_editIp);
 	DDX_Control(pDX, IDC_DATA, m_editData);
+	DDX_Control(pDX, IDC_NORMAL2, m_editnormal);
+	DDX_Control(pDX, IDC_ABNORMAL, m_editabnormal);
 }
 
 
@@ -65,7 +68,17 @@ BOOL CIDS::OnInitDialog()
 	m_editEth.SetLimitText(0);
 	m_editTcp.SetLimitText(0);
 	m_editIp.SetLimitText(0);
-	m_editData.SetLimitText(0);	//Edit Control 길이 최대지정
+	m_editData.SetLimitText(0);	
+	m_editnormal.SetLimitText(0);
+	m_editabnormal.SetLimitText(0);
+	//Edit Control 길이 최대지정
+
+	h = 0;
+	m = 0;
+	s = 0;
+	d_m = 0;
+	count = 0;
+	//초기화
 
 	return TRUE;  // return TRUE unless you set the focus to a control
 				  // EXCEPTION: OCX Property Pages should return FALSE
@@ -81,35 +94,259 @@ UINT CIDS::ThreadFirst(LPVOID _mothod)
 
 }
 
-void CIDS::ThreadFunc()
+void CIDS::ThreadFunc()	//스레드실행 함수
 {
 	struct pcap_pkthdr *header;
 
 	const unsigned char *pkt_data;
+	
 	int res;
+	int offset2;
 
 	while ((res = pcap_next_ex(fp, &header, &pkt_data)) >= 0) {
 		if (res == 0) continue;
+		offset2 = 0;
 
 		print_ether_header(pkt_data);
 		pkt_data = pkt_data + 14;       // raw_pkt_data의 14번지까지 이더넷
+
 		offset = print_ip_header(pkt_data);
+		offset2 += offset;
 		pkt_data = pkt_data + offset;           // ip_header의 길이만큼 오프셋
+
 		offset = print_tcp_header(pkt_data);
+		offset2 += offset;
 		pkt_data = pkt_data + offset;           //print_tcp_header *4 데이터 위치로 오프셋
-		print_data(pkt_data);
+		
+		pkt_data = pkt_data - offset2;
+		Check_Normal(pkt_data, pkt_data + offset2);	//정상, 비정상탐지 , 데이터 출력
+		
 	}
 
 }
 
-void CIDS::OnBnClickedButton1()
+void CIDS::Check_Normal(const unsigned char *data, const unsigned char *data2)
+{
+	count++;
+
+	struct  ip_header *ih;
+	ih = (struct ip_header *)data;  // ip_header의 구조체 형태로 변환
+
+	char text[2048] = { 0, };
+
+	for (int i = 0; i < (ntohs(ih->ip_total_length) - 52); i++)
+	{
+		text[i] = data2[i];	//문자열 배열에 데이터 길이만큼 데이터 대입
+	}
+	
+	CString str = "";
+	CString normal = "";
+	CString abnormal = "";
+
+	char len2[100] = { 0, };
+
+	int value;
+	int no;
+	char val[100] = { 0, };
+
+	//IDS RULE 시작
+
+	CTime ctime = CTime::GetCurrentTime();	//현재시간 가져옴
+
+	int past;	//과거 초 지정할 변수
+
+	past = s;	//과거에 초 저장
+
+	h = ctime.GetHour();
+	m = ctime.GetMinute();
+	s = ctime.GetSecond();	//시간값 각각 저장
+
+	time = "";
+	CString temp2 = "";
+
+	temp2.Format("%02d:", h);
+	time += temp2;
+	temp2.Format("%02d:", m);
+	time += temp2;
+	temp2.Format("%02d", s);
+	time += temp2;
+	time += "\r\n";	//시간값 대입
+
+	char proto[100] = { 0, };
+	char timing[100] = { 0, };
+
+	past = s - past;	//타이밍 계산
+
+	if (past < 0)
+		past += 60;	// 60초 넘어가는 구간에서 60더해서 타이밍 계산
+
+	d_m += past;	//디도스 탐지를 위한 시간 기준값
+
+	if (d_m > 60 && d_m < 70)//시간 60~70초 
+	{
+		if (count > 1000)	//6만번 초과 카운트시 디도스로 판명 (디도스 기준 수정가능)
+		{
+			abnormal += "DDOS DETCTION\r\n";
+		}
+	}
+
+	for (int i = 0; i < strlen(text); i++)
+	{
+		value = text[i];
+
+		if (value > 0 && value < 51)	//데이터 패킷 검사 (현재 데이터 범위 1~50) 사용자 환경에 따라 수정가능
+			no = -1;
+		else{	//데이터 범위 벗어난 경우 해당 값을 가져옴
+			no = value;
+			break;
+		}
+
+	}
+
+	
+	//정상탐지 조건 (사용자 환경에 따라 수정가능, 현재 프로토콜 6번, 패킷길이 50, 타이밍 0,3 초로 설정)
+	if (ih->ip_protocol == 0x06 && ((ntohs(ih->ip_total_length) - 52) == 50 || ntohs(ih->ip_total_length) == 52) && (past == 3 || past == 0) && no == -1)
+	{
+		if ((ntohs(ih->ip_total_length)-52) == 50)
+		{
+				normal += "==========NORMAL==========\r\n";
+				normal += time;
+				normal += "Protocol : TCP\r\n";
+				sprintf(len2, "Data_Packet Length : %d\r\n", ntohs(ih->ip_total_length) - 52);
+				sprintf(timing, "Timing : %d s\r\n", past);
+
+				normal += len2;
+				normal += timing;
+				normal += "Value : OK.\r\n";
+		}
+
+	}
+	else {	//비정상탐지 조건 (사용자 환경에 따라 수정가능)
+		if (no != -1 || ((ntohs(ih->ip_total_length) - 52) != 50 && ntohs(ih->ip_total_length) != 52) || past != 3)
+		{
+			if (((ntohs(ih->ip_total_length) - 52) != 64 && ntohs(ih->ip_total_length) != 52) && past != 0)	//암호화 패킷 걸러내는 부분
+			{
+			
+				abnormal += "==========ABNORMAL==========\r\n";
+				abnormal += time;
+				sprintf(proto, "Protocol Num : %d\r\n", ih->ip_protocol);
+				sprintf(len2, "Data_Packet Length : %d\r\n", ntohs(ih->ip_total_length) - 52);
+				sprintf(timing, "Timing : %d s\r\n", past);
+				sprintf(val, "Value Error : %d\r\n", value);
+
+				abnormal += proto;
+				abnormal += len2;
+				abnormal += timing;
+				abnormal += val;
+			}
+		}
+		
+	}
+
+
+
+	//정상출력
+	int nLen2 = m_editnormal.GetWindowTextLength();
+	if (nLen2 > 2100000000)
+	{
+		m_editnormal.SetSel(0, -1);
+		m_editnormal.Clear();
+
+		str = "NORMAL_Log Clear";
+
+		IDS_LIST.InsertString(line++, str);
+		IDS_LIST.SetCurSel(line - 1);
+
+	}
+	else
+	{
+		m_editnormal.SetSel(nLen2, nLen2);
+		m_editnormal.ReplaceSel(normal);
+	}
+
+	//비정상출력
+	int nLen3 = m_editabnormal.GetWindowTextLength();
+	if (nLen3 > 2100000000)
+	{
+		m_editabnormal.SetSel(0, -1);
+		m_editabnormal.Clear();
+
+		str = "ABNORMAL_Log Clear";
+
+		IDS_LIST.InsertString(line++, str);
+		IDS_LIST.SetCurSel(line - 1);
+
+	}
+	else
+	{
+		m_editabnormal.SetSel(nLen3, nLen3);
+		m_editabnormal.ReplaceSel(abnormal);
+	}
+
+
+	//데이터 출력부
+	CString str2 = "";
+	str2 = "\r\n============DATA============\r\n";
+	
+	CString temp = "";
+	int e_count = 1;
+
+	for (int i = 0; i < (ntohs(ih->ip_total_length) - 52); i++)	
+	{
+		value = text[i];
+
+		if (value < 0)
+			temp.Format("%02X\t", value & (0xff));
+		else
+			temp.Format("%02X\t", value);	//각 바이트를 HEX 코드로 바꿔줌
+
+		str2 += temp;
+
+		if (e_count % 5 == 0)
+			str2 += "\r\n";	//8바이트마다 줄바꿈
+
+		e_count++;
+
+	}
+
+	int nLen = m_editData.GetWindowTextLength();
+	if (nLen > 2100000000)
+	{
+		m_editEth.SetSel(0, -1);
+		m_editEth.Clear();
+
+		m_editIp.SetSel(0, -1);
+		m_editIp.Clear();
+
+		m_editTcp.SetSel(0, -1);
+		m_editTcp.Clear();
+
+		m_editData.SetSel(0, -1);
+		m_editData.Clear();
+
+		str = "Log Clear";
+
+		IDS_LIST.InsertString(line++, str);
+		IDS_LIST.SetCurSel(line - 1);
+
+	}
+	else
+	{
+		m_editData.SetSel(nLen, nLen);
+		m_editData.ReplaceSel(str2);
+	}
+
+
+}
+
+void CIDS::OnBnClickedButton1()	//IDS 시작 버튼
 {
 	GetDlgItem(IDC_BUTTON1)->EnableWindow(FALSE);
 	GetDlgItem(IDC_BUTTON2)->EnableWindow(TRUE);
 
 	CString str = "";
 
-	if (pcap_findalldevs(&alldevs, errbuf) == -1) {
+	if (pcap_findalldevs(&alldevs, errbuf) == -1) {	
 
 		str="dev find failed\n";
 
@@ -141,7 +378,7 @@ void CIDS::OnBnClickedButton1()
 		str.Format("%d", ++i);
 
 		DEVICE_LIST.InsertItem(list_count, str);
-		DEVICE_LIST.SetItem(list_count, 1, LVIF_TEXT, d->name, 0, 0, 0, NULL);
+		DEVICE_LIST.SetItem(list_count, 1, LVIF_TEXT, d->name, 0, 0, 0, NULL);	//장치 목록 List Control에 출력
 
 		list_count++;
 
@@ -166,7 +403,7 @@ void CIDS::OnBnClickedButton1()
 	
 }
 
-void CIDS::print_ether_header(const unsigned char *data)
+void CIDS::print_ether_header(const unsigned char *data)	//이더넷 헤더 출력부
 {
 	struct  ether_header *eh;               // 이더넷 헤더 구조체
 	unsigned short ether_type;
@@ -177,7 +414,6 @@ void CIDS::print_ether_header(const unsigned char *data)
 
 	if (ether_type != 0x0800)
 	{
-
 		str = "ether type wrong\n";
 
 		IDS_LIST.InsertString(line++, str);
@@ -185,6 +421,7 @@ void CIDS::print_ether_header(const unsigned char *data)
 
 		return;
 	}
+
 	// 이더넷 헤더 출력
 	char text[2048] = { 0, };
 	char text2[2048] = { 0, };
@@ -238,22 +475,24 @@ void CIDS::print_ether_header(const unsigned char *data)
 	}
 }
 
-int CIDS::print_ip_header(const unsigned char *data)
+int CIDS::print_ip_header(const unsigned char *data)	//ip 헤더 출력부
 {
 	struct  ip_header *ih;
-	ih = (struct ip_header *)data;  // 마찬가지로 ip_header의 구조체 형태로 변환
+	ih = (struct ip_header *)data;  // ip_header의 구조체 형태로 변환
 	
 	CString str = "";
+	
 
 	char ip[100] = { 0, };
 
 	str = "============IP HEADER============\r\n";
-	
 	sprintf(ip, "IPv%d ver \r\n", ih->ip_version);
 
-	char len[100] = { 0, };
+
 	// Total packet length (Headers + data)
+	char len[100] = { 0, };
 	sprintf(len, "Packet Length : %d\r\n", ntohs(ih->ip_total_length) + 14);
+	
 
 	char ttl[100] = { 0, };
 
@@ -262,22 +501,23 @@ int CIDS::print_ip_header(const unsigned char *data)
 	str += ip;
 	str += len;
 	str += ttl;
-
-	if (ih->ip_protocol == 0x06)
+	
+	if (ih->ip_protocol == 0x06)	//프로토콜 6번
 	{
 		str += "Protocol : TCP\r\n";
+		
 	}
-
+	
 	char src_ip[100] = { 0, };
 	char dst_ip[100] = { 0, };
 
-	sprintf(src_ip, "Src IP Addr : %s\r\n", inet_ntoa(ih->ip_srcaddr));
-	sprintf(dst_ip, "Dst IP Addr : %s\r\n", inet_ntoa(ih->ip_destaddr));
+	sprintf(src_ip, "Src IP Addr : %s\r\n", inet_ntoa(ih->ip_srcaddr));		//접근 ip 주소
+	sprintf(dst_ip, "Dst IP Addr : %s\r\n", inet_ntoa(ih->ip_destaddr));	//목적지 ip 주소
 
 	str += src_ip;
 	str += dst_ip;
 
-
+	//출력 및 초기화
 	int nLen = m_editIp.GetWindowTextLength();
 	if (nLen > 2100000000)
 	{
@@ -305,23 +545,21 @@ int CIDS::print_ip_header(const unsigned char *data)
 		m_editIp.ReplaceSel(str);
 	}
 
-
-	
 	// return to ip header size
 	return ih->ip_header_len * 4;
 }
 
-int CIDS::print_tcp_header(const unsigned char *data)
+
+int CIDS::print_tcp_header(const unsigned char *data)	//tcp 헤더 출력부
 {
 	struct tcp_header *th;
-	th = (struct tcp_header *)data;
+	th = (struct tcp_header *)data;	//tcp 헤더 구조체 형태로 변호나
 
-	
 	char src_port[100] = { 0, };
 	char des_port[100] = { 0, };
 
 	sprintf(src_port, "Src Port Num : %d\r\n", ntohs(th->source_port));
-	sprintf(des_port, "Dest Port Num : %d\r\n", ntohs(th->dest_port));
+	sprintf(des_port, "Dest Port Num : %d\r\n", ntohs(th->dest_port));	//포트출력
 
 	CString str = "";
 
@@ -365,7 +603,7 @@ int CIDS::print_tcp_header(const unsigned char *data)
 		str += " FIN ";
 	}
 
-	str += "\r\n";
+	str += "\r\n";	//Flag 출력
 
 	int nLen = m_editTcp.GetWindowTextLength();
 	if (nLen > 2100000000)
@@ -398,14 +636,14 @@ int CIDS::print_tcp_header(const unsigned char *data)
 }
 
 
-void CIDS::OnNMDblclkDevice(NMHDR *pNMHDR, LRESULT *pResult)
+void CIDS::OnNMDblclkDevice(NMHDR *pNMHDR, LRESULT *pResult)	//List Control 클릭 이벤트
 {
 	LPNMITEMACTIVATE pNMItemActivate = reinterpret_cast<LPNMITEMACTIVATE>(pNMHDR);
 	// TODO: Add your control notification handler code here
 
 	if (pNMItemActivate->iItem != -1)
 	{
-		CString NUM = DEVICE_LIST.GetItemText(pNMItemActivate->iItem, 0);
+		CString NUM = DEVICE_LIST.GetItemText(pNMItemActivate->iItem, 0);	//숫자 클릭 시 값 가져옴
 		inum = _ttoi(NUM);
 
 		CString str = "";
@@ -423,12 +661,11 @@ void CIDS::OnNMDblclkDevice(NMHDR *pNMHDR, LRESULT *pResult)
 			IDS_LIST.SetCurSel(line - 1);
 
 			pcap_freealldevs(alldevs);
-		}
+		}	//해당 랜카드로 패킷캡처 시작
 
 		str = "pcap open successful\n";
 		IDS_LIST.InsertString(line++, str);
 		IDS_LIST.SetCurSel(line - 1);
-
 
 
 		if (pcap_compile(fp,  // pcap handle
@@ -443,7 +680,7 @@ void CIDS::OnNMDblclkDevice(NMHDR *pNMHDR, LRESULT *pResult)
 
 			pcap_freealldevs(alldevs);
 
-		}
+		}	//pcap 컴파일
 
 		if (pcap_setfilter(fp, &fcode) <0) {
 
@@ -481,7 +718,7 @@ void CIDS::OnNMDblclkDevice(NMHDR *pNMHDR, LRESULT *pResult)
 	*pResult = 0;
 }
 
-bool CIDS::DestroyTherad()
+bool CIDS::DestroyTherad()	//스레드 종료 함수
 {
 	if (p1 != NULL)
 	{
@@ -498,69 +735,10 @@ bool CIDS::DestroyTherad()
 
 }
 
-void CIDS::print_data(const unsigned char *data)
-{
-	char text[2048] = { 0, };
-	CString str = "";
-
-	str = "\r\n============DATA============\r\n";
-	sprintf(text, "%s\r\n", data);
-
-	CString temp = "";
-	int e_count = 1;
-
-	for (int i = 0; i < strlen(text); i++)
-	{
-		int value = text[i];
-
-		if (value < 0)
-			temp.Format("%02X\t", value & (0xff));
-		else
-			temp.Format("%02X\t", value);	//각 바이트를 HEX 코드로 바꿔줌
-
-		str += temp;
-
-		if (e_count % 5 == 0)
-			str += "\r\n";	//8바이트마다 줄바꿈
-
-		e_count++;
-
-	}
-
-	//str += text;
-
-	int nLen = m_editData.GetWindowTextLength();
-	if (nLen > 2100000000)
-	{
-		m_editEth.SetSel(0, -1);
-		m_editEth.Clear();
-
-		m_editIp.SetSel(0, -1);
-		m_editIp.Clear();
-
-		m_editTcp.SetSel(0, -1);
-		m_editTcp.Clear();
-
-		m_editData.SetSel(0, -1);
-		m_editData.Clear();
-
-		str = "Log Clear";
-
-		IDS_LIST.InsertString(line++, str);
-		IDS_LIST.SetCurSel(line - 1);
-
-	}
-	else
-	{
-		m_editData.SetSel(nLen, nLen);
-		m_editData.ReplaceSel(str);
-	}
-
-}
 
 
 
-void CIDS::OnBnClickedButton2()
+void CIDS::OnBnClickedButton2()	//IDS 중지 버튼
 {
 	// TODO: Add your control notification handler code here
 

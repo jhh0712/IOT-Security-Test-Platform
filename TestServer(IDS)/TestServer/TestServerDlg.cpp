@@ -84,7 +84,7 @@ void CTestServerDlg::DoDataExchange(CDataExchange* pDX)
 
 
 
-	DDX_Control(pDX, IDC_CLIENT, CLIENT_LIST);
+	//DDX_Control(pDX, IDC_CLIENT, CLIENT_LIST);
 }
 
 BEGIN_MESSAGE_MAP(CTestServerDlg, CDialogEx)
@@ -173,11 +173,11 @@ BOOL CTestServerDlg::OnInitDialog()
 	{
 		AfxMessageBox(_T("KEY MANAGEMENT DB CONNECTION ERROR"));
 	}
-
+/*
 	CLIENT_LIST.InsertColumn(1, _T("NUM"), LVCFMT_LEFT, 50);		//List Control 초기화
 	CLIENT_LIST.InsertColumn(2, _T("ADDRESS"), LVCFMT_LEFT, 150);	//List Control 초기화
 	CLIENT_LIST.InsertColumn(3, _T("DATE"), LVCFMT_LEFT, 160);	//List Control 초기화
-
+	*/
 //	list_count = 0;	//List Control 표시줄 카운트 초기화
 
 	//p1 = NULL;
@@ -474,6 +474,14 @@ void CTestServerDlg::OnReceive(ClientSock* pSock)
 		if (count2 != 0)	//나머지가 있으면 배열크기 증가시켜야함
 			count++;
 
+		k = 0;
+
+		for (int m = 0; m < 1024; m++)
+			for (int i = 0; i < 4; i++)
+				for (int j = 0; j < 4; j++)
+					State[m][i][j] = 0;		//State값 초기화
+
+
 		for (int m = 0; m < count; m++)
 		{
 			for (int i = 0; i < 4; i++)
@@ -513,29 +521,17 @@ void CTestServerDlg::OnReceive(ClientSock* pSock)
 		}
 
 
-		char *buff3 = (char *)malloc(sizeof(char)*dwReadLen);
-
+		//char *buff3 = (char *)malloc(sizeof(char)*dwReadLen);
+		char buff3[8192] = { 0, };
 
 		k = 0;
-		flag = 0;
+
 
 		for (int i = 0; i < count; i++)
-		{
 			for (int j = 0; j < 16; j++)
-			{
 				buff3[k++] = buff2[i][j];	//소켓통신을 위해 1차원 버퍼에 2차원 암호화 데이터 대입
 
-				if (k == dwReadLen)
-				{
-					flag = 1;
-					break;
-				}
-			}
-			if (flag == 1)
-				break;
-		}
-
-		OnSend(buff3, dwReadLen);
+		OnSend(buff3, k);
 
 
 		temp_date = "";
@@ -558,21 +554,26 @@ void CTestServerDlg::OnReceive(ClientSock* pSock)
 
 
 		int *db_enc = (int *)malloc(sizeof(int)*dwReadLen);	//수신데이터 DB에 ASCII코드 형태로 저장하기 위해 int형 배열 동적할당
+		
+		e_count = 1;
 
 		for (int i = 0; i < dwReadLen; i++)
 		{
+			
 			db_enc[i] = buff3[i];	//char형 int형에 대입
 
 			CString temp_query;
 
 			temp_query.Format("%d", db_enc[i]);	//int -> CString 변환
 
-			if (i % 15 == 0 && i != 0)	//0번째를 제외하고 15번째에는 @를 추가
+			if (e_count % 16 == 0)	//0번째를 제외하고 15번째에는 @를 추가
 				temp_query += "@";
 			else	//그 외에는 !를 추가
 				temp_query += "!";
 
 			enc_query += temp_query;	//해당 데이터를 암호화 쿼리 저장변수에 계속 추가해줌
+
+			e_count++;
 		}
 
 		free(db_enc);	//동적메모리 해제
@@ -595,7 +596,7 @@ void CTestServerDlg::OnReceive(ClientSock* pSock)
 
 		mysql_free_result(sql_result2);
 
-		free(buff3);
+		//free(buff3);
 		delete buff;
 	
 	/*else

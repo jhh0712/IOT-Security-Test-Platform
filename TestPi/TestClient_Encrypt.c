@@ -73,7 +73,7 @@ int main(void)
 	memset(&server_addr, 0, sizeof(server_addr));	//소켓 주소 초기화
 	server_addr.sin_family = AF_INET;	//IPv4 주소체계
 	server_addr.sin_port = htons(7777);	//서버 포트번호	     	
-	server_addr.sin_addr.s_addr = inet_addr("192.168.0.73");	//윈도우 서버 IP주소 
+	server_addr.sin_addr.s_addr = inet_addr("192.168.0.57");	//윈도우 서버 IP주소 
 
 
 	if(connect(client_socket, (struct sockaddr*)&server_addr, sizeof(server_addr))==-1)	//연결요청 및 실패시
@@ -234,7 +234,7 @@ int main(void)
 
 		free(buff);	//메모리해제
 
-		sleep(2);	//2초 딜레이
+		sleep(3);	//3초 딜레이
 		
 		memset(query, 0, 512);
 		memset(aes_key, 0, 100);
